@@ -1,0 +1,66 @@
+version: '3.7'
+
+services:
+  apache:
+    image: httpd:2.4-alpine
+    ports:
+    - '8080:80'
+    logging:
+      driver: fluentd
+      options:
+        mode: non-blocking
+        fluentd-address: 'localhost:24224'
+        max-buffer-size: '10m'
+        tag: 'apache'
+    depends_on:
+      - fluentd
+
+  fluentd:
+    image: 'fluentd:dev'
+    build:
+      context: ./fluentd
+    ports:
+    - '24224:24224/tcp'
+    - '24224:24224/udp'
+    logging:
+      driver: json-file
+      options:
+        max-size: '100m'
+        max-file: '1'
+    depends_on:
+      - elasticsearch
+
+  elasticsearch:
+    image: 'elasticsearch:dev'
+    build:
+      context: ./elasticsearch
+    ports:
+    - '9200:9200'
+    volumes:
+    - 'elasticsearch-data:/usr/src/elasticsearch/data'
+    - 'elasticsearch-logs:/usr/src/elasticsearch/logs'
+    logging:
+      driver: json-file
+      options:
+        max-size: '100m'
+        max-file: '1'
+
+  kibana:
+    image: 'kibana:dev'
+    build:
+      context: ./kibana
+    ports:
+    - '5601:5601'
+    logging:
+      driver: json-file
+      options:
+        max-size: '100m'
+        max-file: '1'
+    depends_on:
+      - elasticsearch
+
+volumes:
+  elasticsearch-logs:
+    external: true
+  elasticsearch-data:
+    external: true
